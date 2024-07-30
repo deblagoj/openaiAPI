@@ -1,11 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
+'''
+## Sources 
+- https://cookbook.openai.com/examples/multimodal/using_gpt4_vision_with_function_calling
+- https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models
+- https://cookbook.openai.com/examples/how_to_format_inputs_to_chatgpt_models
 
-# Sources 
-#https://cookbook.openai.com/examples/multimodal/using_gpt4_vision_with_function_calling
-#https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models
-#https://cookbook.openai.com/examples/how_to_format_inputs_to_chatgpt_models
 
+## To-do 
+Make a cycle to go over all the pictures in the folder and generate the ouput, put the numeber of the picture before the html output.
+tell gabi gi make the screenshotes and numerate then by numbers
+
+do the same for abstract 
+
+'''
 import json
 import base64
 import os
