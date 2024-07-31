@@ -40,18 +40,33 @@ def resize_image(image_path: str, max_width: int = 800):
             img = img.resize((max_width, int((max_width / img.width) * img.height)))
             img.save(image_path)
 
-# Sample images for testing
-image_dir = "/Users/blagojdelipetrev/Code/EUknowledge/Numerical/2"
+# Sample images for prompt
+image_dir = "/Users/blagojdelipetrev/Code/EUknowledge/Numerical/prompt_images"
 
-# Encode all images within the directory
+# Encode all images within the prompt and all_images directory 
 image_files = os.listdir(image_dir)
-image_data = {}
+image_data_prompt = {}
 for image_file in image_files:
     image_path = os.path.join(image_dir, image_file)
     resize_image(image_path)  # Resize the image before encoding
     encoded_image = encode_image(image_path)
-    image_data[image_file.split('.')[0]] = encoded_image
+    image_data_prompt[image_file.split('.')[0]] = encoded_image
     logging.debug(f"Encoded image: {image_file}")
+
+# Sample images for prompt
+image_dir = "/Users/blagojdelipetrev/Code/EUknowledge/Numerical/all_images"
+
+# Encode all images within the all_images directory 
+image_files = os.listdir(image_dir)
+image_data_all = {}
+for image_file in image_files:
+    image_path = os.path.join(image_dir, image_file)
+    resize_image(image_path)  # Resize the image before encoding
+    encoded_image = encode_image(image_path)
+    image_data_all[image_file.split('.')[0]] = encoded_image
+    logging.debug(f"Encoded image: {image_file}")
+
+
 
 def display_images(image_data: dict):
     fig, axs = plt.subplots(1, len(image_data), figsize=(18, 6))
@@ -67,7 +82,7 @@ def display_images(image_data: dict):
     plt.tight_layout()
     plt.show()
 
-#display_images(image_data)
+display_images(image_data_all)
 
 
 def display_single_image(image_data: dict, image_key: str):
@@ -84,7 +99,7 @@ def display_single_image(image_data: dict, image_key: str):
     plt.show()
 
 # Example usage
-display_single_image(image_data, '5')
+display_single_image(image_data_prompt, '5')
 
 # OpenAI API setup
 from openai import OpenAI
@@ -104,36 +119,44 @@ RESPOSE_1 = '<h1>Solution to ESPO Numerical Question</h1><ol><li>Identify the to
 RESPOSE_2 = '<h1>Solution to ESPO Numerical Question</h1><ol><li>Identify the total usage hours for the month: <ul><li>Total usage hours: 10,000</li></ul></li><li>Determine the usage hours for Technology and Finance: <ul><li>Technology: 25%</li><li>Finance: 20%</li></ul></li><li>Calculate the usage hours for Technology: <ul><li>Usage hours for Technology = 10,000 × 25% = 10,000 × 0.25 = 2,500 hours</li></ul></li><li>Calculate the usage hours for Finance: <ul><li>Usage hours for Finance = 10,000 × 20% = 10,000 × 0.20 = 2,000 hours</li></ul></li><li>Calculate the combined usage hours for Technology and Finance: <ul><li>Combined usage hours = 2,500 + 2,000 = 4,500 hours</li></ul></li></ol><h2>Conclusion</h2><p>The total usage in hours for the Technology and Finance industries combined is <strong>4,500 hours</strong>.</p>'
 MODEL = "gpt-4-turbo-2024-04-09"
 
-def gpt_with_image_input(image_data: dict, test_image: str):
-    encoded_image = image_data[test_image]
-    image_url1 = f"data:image/jpeg;base64,{image_data['3']}"
-    image_url2 = f"data:image/jpeg;base64,{image_data['4']}"
-    image_url = f"data:image/jpeg;base64,{encoded_image}"
-    messages = [
-        {"role": "system", "content": INSTRUCTION_PROMPT},
-        {"role": "user", "content": [{"type": "image_url", "image_url": {"url": image_url1}}]},
-        {"role": "assistant", "content": RESPOSE_1},
-        {"role": "user", "content": [{"type": "image_url", "image_url": {"url": image_url2}}]},
-        {"role": "assistant", "content": RESPOSE_2},
-        {"role": "user", "content": [{"type": "image_url", "image_url": {"url": image_url}}]},
-    ]
-    payload = {
-        "model": MODEL,
-        "messages": messages,
-        "temperature": 0.0,  # for less diversity in responses
-    }
+def process_all_images(image_data_prompt: dict, image_data_all: dict):
+    results = {}
+    for image_key, encoded_image in image_data_all.items():
+        image_url1 = f"data:image/jpeg;base64,{image_data_prompt['3']}"
+        image_url2 = f"data:image/jpeg;base64,{image_data_prompt['4']}"
+        image_url = f"data:image/jpeg;base64,{encoded_image}"
+        messages = [
+            {"role": "system", "content": INSTRUCTION_PROMPT},
+            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": image_url1}}]},
+            {"role": "assistant", "content": RESPOSE_1},
+            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": image_url2}}]},
+            {"role": "assistant", "content": RESPOSE_2},
+            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": image_url}}]},
+        ]
+        payload = {
+            "model": MODEL,
+            "messages": messages,
+            "temperature": 0.0,  # for less diversity in responses
+        }
 
-    # Count tokens
-    total_tokens = sum(count_tokens(json.dumps(msg), MODEL) for msg in messages)
-    print(f"Total tokens used in the request: {total_tokens}")
+        # Count tokens
+        total_tokens = sum(count_tokens(json.dumps(msg), MODEL) for msg in messages)
+        print(f"Total tokens used in the request: {total_tokens}")
 
-    try:
-        response = client.chat.completions.create(**payload)
-        print(response.choices[0].message.content)
-    except Exception as e:
-        logging.error(f"Error processing image {test_image}: {e}")
+        try:
+            response = client.chat.completions.create(**payload)
+            results[image_key] = response.choices[0].message.content
+            print(response.choices[0].message.content)
+        except Exception as e:
+            logging.error(f"Error processing image {image_key}: {e}")
+
+         # Save results to JSON file
+    with open('output_results.json', 'w') as json_file:
+        json.dump(results, json_file, indent=4)
+
 
 # Example usage
 # display_single_image(image_data, '3')  # Display a single image
-gpt_with_image_input(image_data, '5')  # Example test image
+# Example usage
+process_all_images(image_data_prompt, image_data_all)
 
